@@ -1,7 +1,22 @@
 #!/usr/bin/env bash
 
+
+# INPUTS_ATTIC_URL: url of the attic server: example "https://attic.example.tld/"
+# INPUTS_ATTIC_CACHE: name of the attic cache: example "default"
+# INPUTS_ATTIC_TOKEN: token from the attic server: example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+# INPUTS_INSTALL_DEPS: if deps should be installed or not: example: true
+# INPUTS_LITTLE_SPACE: if nix store should be cleaned after every build: example true
+# INPUTS_FLAKE_PATH: path to flake folder: example "./"
+# INPUT_CRON: cron time: example "0 0 * * *"
+
 PWD=$(pwd)
-FLAKE_PATH=$1
+if [[ $INPUTS_FLAKE_PATH == "" ]]; then
+  INPUTS_FLAKE_PATH=$1
+fi
+
+create_cron_entry() {
+  echo "$INPUT_CRON $0 $INPUTS_FLAKE_PATH" | crontab -
+}
 
 install_deps() {
   nix-env -iA attic-client -f '<nixpkgs>'
@@ -95,19 +110,24 @@ build_systems() {
 }
 
 main() {
-  if [ ! -d $FLAKE_PATH ]; then 
-    echo $FLAKE_PATH is not a vaild path
+  if [ ! -d $INPUTS_FLAKE_PATH ]; then 
+    echo $INPUTS_FLAKE_PATH is not a vaild path
     echo Usage: $0 [Path to Directory with flake]
     exit 1
+  fi
+
+  if [[ $INPUTS_CRON != "" ]]; then
+    create_cron_entry
   fi
 
   if [[ $INPUTS_INSTALL_DEPS == true ]]; then
     install_deps
   fi
+
   login
 
-  if [[ "$FLAKE_PATH" != "" ]]; then
-    cd $FLAKE_PATH
+  if [[ "$INPUTS_FLAKE_PATH" != "" ]]; then
+    cd $INPUTS_FLAKE_PATH
   fi
 
   if [[ ($INPUTS_BUILD_SYSTEMS == 'true') || ($INPUTS_BUILD_SYSTEMS == '') ]]; then
@@ -118,7 +138,7 @@ main() {
     build_packages
   fi
   
-  if [[ "$FLAKE_PATH" != "" ]]; then
+  if [[ "$INPUTS_FLAKE_PATH" != "" ]]; then
     cd $PWD
   fi
 }
